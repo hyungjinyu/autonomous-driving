@@ -46,12 +46,13 @@ def control_led(status):
 
 
 def control_dc_motors(direction, speed):
-    # DC 모터 제어 코드 (forward, backward, stop 등)
+    # DC 모터 제어 코드 ("forward", backward, stop 등)
+    #1000은 고정값이 아님.
     pwm_1 = GPIO.PWM(GPIO_EN_1, 1000)  # PWM 주파수를 1000Hz로 설정
     pwm_2 = GPIO.PWM(GPIO_EN_2, 1000)  # PWM 주파수를 1000Hz로 설정
 
-    pwm_1.start(speed)
-    pwm_2.start(speed)
+    pwm_1.start(NORMAL_SPEED)
+    pwm_2.start(NORMAL_SPEED)
 
     if direction == "forward":
         # 모터를 전진 방향으로 회전
@@ -74,6 +75,18 @@ def control_dc_motors(direction, speed):
 
         GPIO.output(GPIO_RP_2, False)
         GPIO.output(GPIO_RN_2, False)
+
+    elif direction == "left":
+        control_servo(45)
+        time.sleep(0.2)  # 0.2초 동안 서보 모터가 회전한 상태 유지
+        control_dc_motors("forward",speed)
+        time.sleep(2)
+        control_dc_motors("stop",speed)
+
+        control_servo(-45)  # 반대 방향으로 45도 회전
+        time.sleep(0.2)
+        control_dc_motors("forward",speed)  # 0.2초 대기
+        control_servo(0)  # 서보 모터를 다시 초기 위치로 회전
     # 추가적인 방향 설정이 필요하다면 여기에 코드를 추가하십시오.
 """
 def angle_to_percent (angle) :
@@ -108,83 +121,120 @@ def control_servo(angle):
 
 try:
     while True:
+        if(KID_ALERT =='1'):
+            speed = KID_SECTION_SPEED
+        else:
+            speed = 100
+
+        if(read_light() == GPIO.HIGH):
+            print("조도가 높아져 LED 끔")
+            control_led(GPIO.LOW)
+
+        #차선의 곡률에 대한 변화 인식
+        
+            
+        
         # 두 모터를 동시에 전진
         # -->현재 전진하는 것이 default임.
         # -->차선인식을 했을 때 따라가도록 코드 많은 추가와 변경 필요
-        GPIO.output(GPIO_RP_1, True)
+        """GPIO.output(GPIO_RP_1, True)
         GPIO.output(GPIO_RN_1, False)
         GPIO.output(GPIO_EN_1, True)
 
         GPIO.output(GPIO_RP_2, True)
         GPIO.output(GPIO_RN_2, False)
         GPIO.output(GPIO_EN_2, True)
+        """
 
         print("직진 중")
 
         user_input = input(" 숫자를 입력하세요 \n")
 
         # 동적 장애물(어린이 보호구역)이 있을 시 정지
-        if user_input == '1':
+        if user_input == '1'
             print("차량 정지")
             # 정지를 위해 모든 핀을 비활성화
-            GPIO.output(GPIO_EN_1, False)
-            GPIO.output(GPIO_EN_2, False)
-    
+            control_dc_motors(stop,speed)
+            #GPIO.output(GPIO_EN_1, False)
+            #GPIO.output(GPIO_EN_2, False)
+
             # 5초간 정지-->동적 장애물이 있을 동안만 정지하게 해야함
-            time.sleep(5)
+            #time.sleep(5)
     
             # 다시 default 상태로 돌아가기
-            GPIO.output(GPIO_EN_1, True)
-            GPIO.output(GPIO_EN_2, True)
+            #GPIO.output(GPIO_EN_1, True)
+            #GPIO.output(GPIO_EN_2, True)
 
         # 정적 장애물 피하기(많은 수정, 추가 필요)
         elif user_input == '2':
+            #카메라를 끄기 코드 입력
+            control_dc_motors(stop,speed)
+            #오른쪽 왼쪽 파악
+            #각도 계산
             print("서보 45도 회전")
-            control_servo(45)
+            control_servo(angle)
+            time.sleep(5)
+            control_dc_motors("forward",speed)
             time.sleep(5)  # 5초 동안 서보 모터가 회전한 상태 유지
+            #control_dc_motors(forward,speed)
+            #time.sleep(5) 45도 회전 이후 얼마나 앞으로 이동할지
+
             print("서보 45도 회전 해제")
-            control_servo(0)  # 서보 모터를 다시 초기 위치로 회전
+            control_servo(-1*angle)  # 서보 모터를 다시 초기 위치로 회전
+            control_dc_motors("forward",speed)
+
+            #카메라를 키기
+
 
         # 어린이 보호구역 시작
-        elif user_input == '3':
-            print("DC 모터 속도 낮춤")
-            control_dc_motors("forward", KID_SECTION_SPEED)
+        #elif user_input == '3':
+        #    print("DC 모터 속도 낮춤")
+        #    control_dc_motors("forward", KID_SECTION_SPEED)
 
         # 어린이 보호구역 종료
-        elif user_input == '4':
-            print("DC 모터 속도 원래대로")
-            control_dc_motors("forward", NORMAL_SPEED)
+        #elif user_input == '4':
+        #    print("DC 모터 속도 원래대로")
+        #    control_dc_motors("forward", NORMAL_SPEED)
 
         # 터널 표지판 인식
         elif user_input == '5':
             print("터널 표지판 인식: LED 켬")
             control_led(GPIO.HIGH)
-            
+            control_dc_motors(""forward"",speed)
             # 조도가 높아질 때까지 대기
-            while read_light() == GPIO.HIGH:
-                time.sleep(1)
 
-            print("조도가 높아져 LED 끔")
-            control_led(GPIO.LOW)
+            #while read_light() == GPIO.HIGH:
+            #    time.sleep(1)
 
-
+            
+            #control_led(GPIO.LOW)
+        
+        
         # 빨간 신호등 또는 최종 라인 (정차)
         elif user_input == 's':
             print("신호등 또는 최종 라인 감지, 차량 정차")
             # 정차를 위해 모든 핀을 비활성화
-            GPIO.output(GPIO_EN_1, False)
-            GPIO.output(GPIO_EN_2, False)
+            control_dc_motors("stop",speed)
+            
 
         # 좌측 차선 변경
         elif user_input == 'l':
             print("좌측 차선 변경, 서보 45도 회전 후 0.2초 대기 후 반대 방향으로 45도 회전")
-            control_servo(45)
+            control_dc_motors("left",speed)
+            """control_servo(45)
             time.sleep(0.2)  # 0.2초 동안 서보 모터가 회전한 상태 유지
+            control_dc_motors("forward",speed)
+            time.sleep(2)
+            control_dc_motors("stop",speed)
+
             control_servo(-45)  # 반대 방향으로 45도 회전
-            time.sleep(0.2)  # 0.2초 대기
-            control_servo(0)  # 서보 모터를 다시 초기 위치로 회전
+            time.sleep(0.2)
+            control_dc_motors("forward",speed)  # 0.2초 대기
+            control_servo(0)  # 서보 모터를 다시 초기 위치로 회전"""
 
         # 우측 차선 변경
+        #직진, 좌,우 빨간색
+        #빨간색 -> 직진 좌우 -> 후 선택
         elif user_input == 'r':
             print("우측 차선 변경, 서보 -45도 회전 후 0.2초 대기 후 반대 방향으로 45도 회전")
             control_servo(-45)
